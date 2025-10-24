@@ -4,15 +4,17 @@ import {
   createRound, 
   updateRoundStatus, 
   getRoundTeams, 
-  updateTeamParticipation,
-  getRoundCriteria,
-  updateRoundCriteria,
-  getRoundAllocations,
+  updateTeamParticipation, 
+  getRoundCriteria, 
+  updateRoundCriteria, 
+  getRoundAllocations, 
   autoAllocateJudges,
-  getRoundSummary
+  getRoundSummary,
+  validateAllocation
 } from '../services/round_services';
 import { fetchAllTeams } from '../services/span_services';
 import { getAllKriteria } from '../services/kriteria_services';
+import TournamentBracket from './TournamentBracket';
 
 const RoundManagement = () => {
   const [rounds, setRounds] = useState([]);
@@ -29,6 +31,9 @@ const RoundManagement = () => {
   const [allocations, setAllocations] = useState([]);
   const [summary, setSummary] = useState([]);
   const [activeTab, setActiveTab] = useState('teams');
+  const [showTournamentBracket, setShowTournamentBracket] = useState(false);
+  const [selectedRoundForBracket, setSelectedRoundForBracket] = useState(null);
+  const [roundStatuses, setRoundStatuses] = useState({});
 
   // New round form state
   const [newRound, setNewRound] = useState({
@@ -55,8 +60,70 @@ const RoundManagement = () => {
       setTeams(teamsData);
       setKriteria(kriteriaData);
       setBeoordelaars(beoordelaarsData);
+      
+      // Load round statuses from localStorage
+      loadRoundStatuses();
     } catch (err) {
       setMessage('Fout met laai van data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load round statuses from localStorage
+  const loadRoundStatuses = () => {
+    try {
+      const storedStatuses = localStorage.getItem('roundStatuses');
+      if (storedStatuses) {
+        setRoundStatuses(JSON.parse(storedStatuses));
+      }
+    } catch (error) {
+      console.error('Error loading round statuses:', error);
+    }
+  };
+
+  // Save round statuses to localStorage
+  const saveRoundStatuses = (statuses) => {
+    try {
+      localStorage.setItem('roundStatuses', JSON.stringify(statuses));
+    } catch (error) {
+      console.error('Error saving round statuses:', error);
+    }
+  };
+
+  // Open a round
+  const handleOpenRound = async (roundId) => {
+    try {
+      setLoading(true);
+      await updateRoundStatus(roundId, 'open');
+      
+      const newStatuses = { ...roundStatuses, [roundId]: 'open' };
+      setRoundStatuses(newStatuses);
+      saveRoundStatuses(newStatuses);
+      
+      setMessage(`Round ${roundId} opened successfully`);
+      await loadData();
+    } catch (error) {
+      setMessage(`Error opening round: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Close a round
+  const handleCloseRound = async (roundId) => {
+    try {
+      setLoading(true);
+      await updateRoundStatus(roundId, 'closed');
+      
+      const newStatuses = { ...roundStatuses, [roundId]: 'closed' };
+      setRoundStatuses(newStatuses);
+      saveRoundStatuses(newStatuses);
+      
+      setMessage(`Round ${roundId} closed successfully`);
+      await loadData();
+    } catch (error) {
+      setMessage(`Error closing round: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -180,14 +247,33 @@ const RoundManagement = () => {
   const handleAutoAllocate = async () => {
     try {
       setLoading(true);
+      
+      // First validate if allocation is possible
+      const validation = await validateAllocation(selectedRound.round_id);
+      
+      if (!validation.is_possible) {
+        setMessage(`❌ ${validation.message}`);
+        return;
+      }
+      
+      // Show validation info
+      setMessage(`✅ ${validation.message}. Voer toewysing uit...`);
+      
+      // Perform the allocation
       const result = await autoAllocateJudges(selectedRound.round_id);
-      setMessage(`Outomatiese toewysing voltooi! ${result.allocations_created} toewysings geskep.`);
+      
+      // Show detailed results
+      const summary = result.summary;
+      setMessage(`🎯 Beoordelaars suksesvol toegewys! 
+        📊 ${summary.total_allocations} toewysings vir ${summary.teams_allocated} spanne
+        👥 ${summary.judges_used} beoordelaars gebruik
+        📈 Gemiddeld ${summary.average_judges_per_team} beoordelaars per span`);
       
       // Reload allocations
       const allocationsData = await getRoundAllocations(selectedRound.round_id);
       setAllocations(allocationsData);
     } catch (err) {
-      setMessage('Fout met outomatiese toewysing: ' + err.message);
+      setMessage('❌ Fout met outomatiese toewysing: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -209,6 +295,16 @@ const RoundManagement = () => {
       case 'archived': return 'Argief';
       default: return status;
     }
+  };
+
+  const handleViewTournamentBracket = (round) => {
+    setSelectedRoundForBracket(round);
+    setShowTournamentBracket(true);
+  };
+
+  const handleCloseTournamentBracket = () => {
+    setShowTournamentBracket(false);
+    setSelectedRoundForBracket(null);
   };
 
   return (
@@ -408,28 +504,77 @@ const RoundManagement = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{
                       padding: '4px 12px',
-                      backgroundColor: getStatusColor(round.status),
+                      backgroundColor: getStatusColor(roundStatuses[round.round_id] || round.status),
                       color: 'white',
                       borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: 'bold'
                     }}>
-                      {getStatusText(round.status)}
+                      {getStatusText(roundStatuses[round.round_id] || round.status)}
                     </span>
-                    <button
-                      onClick={() => handleViewRoundDetails(round)}
-                      style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Besonderhede
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleViewRoundDetails(round)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        Besonderhede
+                      </button>
+                      <button
+                        onClick={() => handleViewTournamentBracket(round)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        🏆 Toernooi
+                      </button>
+                      
+                      {/* Open/Close Round Controls */}
+                      {(roundStatuses[round.round_id] || round.status) === 'closed' ? (
+                        <button
+                          onClick={() => handleOpenRound(round.round_id)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#17a2b8',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          🔓 Open Round
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCloseRound(round.round_id)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          🔒 Close Round
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -872,6 +1017,35 @@ const RoundManagement = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Tournament Bracket Modal */}
+      {showTournamentBracket && selectedRoundForBracket && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            width: '95%',
+            height: '95%',
+            overflow: 'hidden'
+          }}>
+            <TournamentBracket 
+              round={selectedRoundForBracket} 
+              onClose={handleCloseTournamentBracket}
+            />
           </div>
         </div>
       )}

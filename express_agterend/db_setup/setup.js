@@ -186,6 +186,96 @@ function initializeDatabase() {
                 )
             `);
 
+            // Tournament brackets storage
+            db.run(`
+                CREATE TABLE IF NOT EXISTS TournamentBrackets (
+                    bracket_id INTEGER PRIMARY KEY,
+                    round_id INTEGER NOT NULL,
+                    phase_name TEXT NOT NULL,
+                    match_id INTEGER NOT NULL,
+                    team1_id INTEGER,
+                    team2_id INTEGER,
+                    winner_id INTEGER,
+                    match_order INTEGER NOT NULL,
+                    is_completed INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (round_id) REFERENCES Rounds(round_id) ON DELETE CASCADE,
+                    FOREIGN KEY (team1_id) REFERENCES Span(span_id) ON DELETE CASCADE,
+                    FOREIGN KEY (team2_id) REFERENCES Span(span_id) ON DELETE CASCADE,
+                    FOREIGN KEY (winner_id) REFERENCES Span(span_id) ON DELETE CASCADE
+                )
+            `);
+
+            // Tournament match judges
+            db.run(`
+                CREATE TABLE IF NOT EXISTS TournamentMatchJudges (
+                    match_judge_id INTEGER PRIMARY KEY,
+                    round_id INTEGER NOT NULL,
+                    phase_name TEXT NOT NULL,
+                    match_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (round_id) REFERENCES Rounds(round_id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+                    UNIQUE(round_id, phase_name, match_id, user_id)
+                )
+            `);
+
+            // Tournament match criteria
+            db.run(`
+                CREATE TABLE IF NOT EXISTS TournamentMatchCriteria (
+                    match_criteria_id INTEGER PRIMARY KEY,
+                    round_id INTEGER NOT NULL,
+                    phase_name TEXT NOT NULL,
+                    match_id INTEGER NOT NULL,
+                    kriteria_id INTEGER NOT NULL,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (round_id) REFERENCES Rounds(round_id) ON DELETE CASCADE,
+                    FOREIGN KEY (kriteria_id) REFERENCES Kriteria(kriteria_id) ON DELETE CASCADE,
+                    UNIQUE(round_id, phase_name, match_id, kriteria_id)
+                )
+            `);
+
+            // Tournament status tracking (independent of round status)
+            db.run(`
+                CREATE TABLE IF NOT EXISTS TournamentStatus (
+                    tournament_id INTEGER PRIMARY KEY,
+                    round_id INTEGER NOT NULL,
+                    tournament_name TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'inactive' CHECK (status IN ('active', 'inactive', 'completed')),
+                    current_phase TEXT,
+                    total_phases INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    started_at DATETIME,
+                    completed_at DATETIME,
+                    FOREIGN KEY (round_id) REFERENCES Rounds(round_id) ON DELETE CASCADE,
+                    UNIQUE(round_id)
+                )
+            `);
+
+            // Tournament match scores
+            db.run(`
+                CREATE TABLE IF NOT EXISTS TournamentMatchScores (
+                    score_id INTEGER PRIMARY KEY,
+                    round_id INTEGER NOT NULL,
+                    phase_name TEXT NOT NULL,
+                    match_id INTEGER NOT NULL,
+                    team_id INTEGER NOT NULL,
+                    judge_id INTEGER NOT NULL,
+                    kriteria_id INTEGER NOT NULL,
+                    score INTEGER NOT NULL DEFAULT 0,
+                    max_score INTEGER NOT NULL DEFAULT 100,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (round_id) REFERENCES Rounds(round_id) ON DELETE CASCADE,
+                    FOREIGN KEY (team_id) REFERENCES Span(span_id) ON DELETE CASCADE,
+                    FOREIGN KEY (judge_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+                    FOREIGN KEY (kriteria_id) REFERENCES Kriteria(kriteria_id) ON DELETE CASCADE,
+                    UNIQUE(round_id, phase_name, match_id, team_id, judge_id, kriteria_id)
+                )
+            `);
+
             // Insert dummy data for Span and Lid tables
             db.run(`
                 INSERT OR IGNORE INTO Span (span_id, naam, projek_beskrywing, span_bio) 
@@ -204,7 +294,32 @@ function initializeDatabase() {
                 (12, 'Data Defenders', 'Cybersecurity monitoring tool', 'Security en network analysis'),
                 (13, 'Cloud Coders', 'Restaurant bestelling sisteem', 'Mobile apps en backend services'),
                 (14, 'Byte Busters', 'Fitness tracking app', 'Mobile development en health tech'),
-                (15, 'Pixel Perfect', 'Event management platform', 'Web development en project management')
+                (15, 'Pixel Perfect', 'Event management platform', 'Web development en project management'),
+                (16, 'Quantum Questers', 'Quantum computing simulator', 'Quantum algorithms en physics'),
+                (17, 'Neural Navigators', 'Deep learning image recognition', 'AI en computer vision'),
+                (18, 'Blockchain Builders', 'Decentralized voting system', 'Blockchain en smart contracts'),
+                (19, 'Robotic Rangers', 'Autonomous delivery robots', 'Robotics en automation'),
+                (20, 'Space Systems', 'Satellite communication network', 'Aerospace en telecommunications'),
+                (21, 'Green Guardians', 'Environmental monitoring system', 'Sustainability en IoT'),
+                (22, 'Health Heroes', 'Telemedicine platform', 'Healthcare en remote monitoring'),
+                (23, 'EduTech Eagles', 'Interactive learning games', 'Educational technology'),
+                (24, 'FinTech Falcons', 'Cryptocurrency trading bot', 'Financial technology'),
+                (25, 'AgriTech Avengers', 'Precision farming system', 'Agriculture en IoT'),
+                (26, 'Smart City Squad', 'Urban planning simulator', 'Smart cities en simulation'),
+                (27, 'Cyber Security Squad', 'Threat detection system', 'Cybersecurity en AI'),
+                (28, 'Data Science Stars', 'Predictive analytics platform', 'Data science en machine learning'),
+                (29, 'Mobile Mavericks', 'Cross-platform mobile app', 'Mobile development'),
+                (30, 'Web Warriors', 'Progressive web application', 'Web development en PWA'),
+                (31, 'Game Gurus', 'Multiplayer online game', 'Game development'),
+                (32, 'VR Visionaries', 'Virtual reality training', 'VR/AR development'),
+                (33, 'AI Architects', 'Natural language processor', 'Artificial intelligence'),
+                (34, 'Cloud Commanders', 'Microservices platform', 'Cloud architecture'),
+                (35, 'Database Dynamos', 'Real-time analytics engine', 'Database optimization'),
+                (36, 'API Avengers', 'RESTful API gateway', 'API development'),
+                (37, 'DevOps Dynamos', 'CI/CD pipeline automation', 'DevOps en automation'),
+                (38, 'Testing Titans', 'Automated testing framework', 'Software testing'),
+                (39, 'Security Sentinels', 'Penetration testing tool', 'Security testing'),
+                (40, 'Performance Pioneers', 'Load testing platform', 'Performance optimization')
             `);
 
             db.run(`
@@ -249,8 +364,9 @@ function initializeDatabase() {
             db.run(`
                 INSERT OR IGNORE INTO Rounds (round_id, round_name, status, max_teams, max_judges_per_team, max_teams_per_judge) 
                 VALUES 
-                (1, 'Capstone 2024 - Final Round', 'open', 15, 3, 3),
-                (2, 'Capstone 2024 - Semi-Final', 'closed', 8, 2, 4)
+                (1, 'Capstone 2024 - Final Round', 'open', 40, 3, 3),
+                (2, 'Capstone 2024 - Semi-Final', 'closed', 8, 2, 4),
+                (3, 'Capstone 2024 - Mega Tournament', 'open', 100, 2, 5)
             `);
 
             // Insert sample team participation
@@ -258,7 +374,12 @@ function initializeDatabase() {
                 INSERT OR IGNORE INTO TeamParticipation (round_id, span_id, is_participating) 
                 VALUES 
                 (1, 1, 1), (1, 2, 1), (1, 3, 1), (1, 4, 1), (1, 5, 1), (1, 6, 1), (1, 7, 1), (1, 8, 1), (1, 9, 1), (1, 10, 1), (1, 11, 1), (1, 12, 1), (1, 13, 1), (1, 14, 1), (1, 15, 1),
-                (2, 1, 1), (2, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 1), (2, 6, 1), (2, 7, 1), (2, 8, 1)
+                (1, 16, 1), (1, 17, 1), (1, 18, 1), (1, 19, 1), (1, 20, 1), (1, 21, 1), (1, 22, 1), (1, 23, 1), (1, 24, 1), (1, 25, 1), (1, 26, 1), (1, 27, 1), (1, 28, 1), (1, 29, 1), (1, 30, 1),
+                (1, 31, 1), (1, 32, 1), (1, 33, 1), (1, 34, 1), (1, 35, 1), (1, 36, 1), (1, 37, 1), (1, 38, 1), (1, 39, 1), (1, 40, 1),
+                (2, 1, 1), (2, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 1), (2, 6, 1), (2, 7, 1), (2, 8, 1),
+                (3, 1, 1), (3, 2, 1), (3, 3, 1), (3, 4, 1), (3, 5, 1), (3, 6, 1), (3, 7, 1), (3, 8, 1), (3, 9, 1), (3, 10, 1), (3, 11, 1), (3, 12, 1), (3, 13, 1), (3, 14, 1), (3, 15, 1),
+                (3, 16, 1), (3, 17, 1), (3, 18, 1), (3, 19, 1), (3, 20, 1), (3, 21, 1), (3, 22, 1), (3, 23, 1), (3, 24, 1), (3, 25, 1), (3, 26, 1), (3, 27, 1), (3, 28, 1), (3, 29, 1), (3, 30, 1),
+                (3, 31, 1), (3, 32, 1), (3, 33, 1), (3, 34, 1), (3, 35, 1), (3, 36, 1), (3, 37, 1), (3, 38, 1), (3, 39, 1), (3, 40, 1)
             `);
 
             // Insert sample round criteria
@@ -267,7 +388,12 @@ function initializeDatabase() {
                 VALUES 
                 (1, 1, 1, 1.0),
                 (1, 2, 1, 1.0),
-                (1, 3, 1, 1.0)
+                (1, 3, 1, 1.0),
+                (2, 1, 1, 1.0),
+                (2, 2, 1, 1.0),
+                (3, 1, 1, 1.0),
+                (3, 2, 1, 1.0),
+                (3, 3, 1, 1.0)
             `);
 
             db.close((err) => {

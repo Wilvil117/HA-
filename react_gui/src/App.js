@@ -7,6 +7,9 @@ import Merk from './merk/merk';
 import SpanAdmin from './spanadmin/spanadmin';
 import JudgeInterface from './beoordelaar/JudgeInterface';
 import Login from './components/Login';
+import TournamentTest from './roundadmin/TournamentTest';
+import RealTournamentSystem from './roundadmin/RealTournamentSystem';
+import TestDataLoader from './roundadmin/TestDataLoader';
 import authService from './services/auth_service';
 import logo from "./logo.svg"
 
@@ -46,6 +49,24 @@ function NavBar({ user, onLogout }){
           >
             Beoordelaar Admin
           </div>
+            <div
+              className="nav-item"
+              onClick={() => route("tournament-test")}
+            >
+              🏆 Tournament Test
+            </div>
+            <div
+              className="nav-item"
+              onClick={() => route("real-tournament")}
+            >
+              🏆 Real Tournament
+            </div>
+            <div
+              className="nav-item"
+              onClick={() => route("test-data")}
+            >
+              🔧 Test Data
+            </div>
         </>
       )}
       
@@ -155,6 +176,9 @@ function App() {
               <Route path="/merkadmin" element={<MerkAdmin />} />
               <Route path="/spanadmin" element={<SpanAdmin />} />
               <Route path="/beoordelaaradmin" element={<BeoordelaarAdmin />} />
+              <Route path="/tournament-test" element={<TournamentTest />} />
+              <Route path="/real-tournament" element={<RealTournamentSystem />} />
+              <Route path="/test-data" element={<TestDataLoader />} />
             </>
           )}
           

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MerkbladKriteriaManager from './merkblad';
 import SpanScores from './span_scores';
 import RoundManagement from '../roundadmin/RoundManagement';
+import BeoordelaarAssignments from './BeoordelaarAssignments';
 import { getRoundStatus, closeRound, openRound, getPunteByRondteId } from '../services/merk_services';
 import { getAllKriteria } from '../services/kriteria_services';
 import { fetchAllTeams } from '../services/span_services';
@@ -13,13 +14,13 @@ function BeoordelaarAdmin() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);  // NEW: add refreshKey
-  const [, setTeams] = useState([]);
+  // const [, setTeams] = useState([]);
   const [kriteria, setKriteria] = useState([]);
   const [beoordelaars, setBeoordelaars] = useState([]);
   const [teamAssignments, setTeamAssignments] = useState({});
   const [criteriaAssignments, setCriteriaAssignments] = useState({});
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
-  const [viewMode, setViewMode] = useState('legacy'); // 'legacy' or 'rounds'
+  const [viewMode, setViewMode] = useState('assignments'); // 'legacy', 'rounds', or 'assignments'
 
   const handleKriteriaUpdated = () => {
     // This function can be used to refresh other components or show notifications
@@ -51,7 +52,7 @@ function BeoordelaarAdmin() {
         const scores = await getPunteByRondteId(rondteId);
         
         // Get all teams
-        const teams = await fetchAllTeams();
+        // const teams = await fetchAllTeams();
         
         // Calculate total scores and possible totals for each team
         const teamScores = {};
@@ -179,12 +180,12 @@ function BeoordelaarAdmin() {
   }, []);
 
   // Handle team assignment
-  const handleTeamAssignment = (teamId, beoordelaarId) => {
-    setTeamAssignments(prev => ({
-      ...prev,
-      [teamId]: beoordelaarId
-    }));
-  };
+  // const handleTeamAssignment = (teamId, beoordelaarId) => {
+  //   setTeamAssignments(prev => ({
+  //     ...prev,
+  //     [teamId]: beoordelaarId
+  //   }));
+  // };
 
   // Handle criteria assignment
   const handleCriteriaAssignment = (kriteriaId, beoordelaarId) => {
@@ -210,10 +211,10 @@ function BeoordelaarAdmin() {
         {/* View Mode Toggle */}
         <div style={{ marginBottom: '30px', display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => setViewMode('legacy')}
+            onClick={() => setViewMode('assignments')}
             style={{
               padding: '10px 20px',
-              backgroundColor: viewMode === 'legacy' ? '#007bff' : '#6c757d',
+              backgroundColor: viewMode === 'assignments' ? '#007bff' : '#6c757d',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -222,7 +223,7 @@ function BeoordelaarAdmin() {
               fontWeight: 'bold'
             }}
           >
-            Tradisionele Weergawe
+            🎯 My Toewysings
           </button>
           <button
             onClick={() => setViewMode('rounds')}
@@ -237,12 +238,29 @@ function BeoordelaarAdmin() {
               fontWeight: 'bold'
             }}
           >
-            Nuwe Rondte Bestuur
+            🏆 Rondte Bestuur
+          </button>
+          <button
+            onClick={() => setViewMode('legacy')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: viewMode === 'legacy' ? '#007bff' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            📊 Tradisionele Weergawe
           </button>
         </div>
         
         {/* Conditional Rendering based on view mode */}
-        {viewMode === 'rounds' ? (
+        {viewMode === 'assignments' ? (
+          <BeoordelaarAssignments />
+        ) : viewMode === 'rounds' ? (
           <RoundManagement />
         ) : (
           <>

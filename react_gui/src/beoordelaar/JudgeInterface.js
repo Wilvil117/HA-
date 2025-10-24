@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getRoundAllocations, getRoundCriteria } from '../services/round_services';
+import { getMyAllocations, getRoundCriteria, getMyTournamentAssignments, getActiveTournament } from '../services/round_services';
 
 const JudgeInterface = () => {
   const [user, setUser] = useState(null);
@@ -10,6 +10,9 @@ const JudgeInterface = () => {
   const [scores, setScores] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [tournamentAssignments, setTournamentAssignments] = useState([]);
+  const [showTournamentAssignments, setShowTournamentAssignments] = useState(false);
+  const [activeTournament, setActiveTournament] = useState(null);
 
   useEffect(() => {
     // Get current user from localStorage
@@ -22,6 +25,7 @@ const JudgeInterface = () => {
   useEffect(() => {
     if (user) {
       loadMyRounds();
+      loadActiveTournament();
     }
   }, [user]);
 
@@ -47,20 +51,42 @@ const JudgeInterface = () => {
     }
   };
 
+  const loadActiveTournament = async () => {
+    try {
+      const tournament = await getActiveTournament();
+      setActiveTournament(tournament);
+    } catch (error) {
+      console.error('Error loading active tournament:', error);
+      setActiveTournament(null);
+    }
+  };
+
   const handleSelectRound = async (round) => {
     try {
       setLoading(true);
       setSelectedRound(round);
       
-      // Get my allocations for this round
-      const allocations = await getRoundAllocations(round.round_id);
-      const myAllocations = allocations.filter(allocation => 
-        allocation.user_id === user.user_id
-      );
+      console.log('Loading allocations for round:', round.round_id);
+      console.log('Current user:', user);
+      
+      // Get my allocations for this round using the new endpoint
+      const myAllocations = await getMyAllocations(round.round_id);
+      console.log('My allocations:', myAllocations);
       setMyAllocations(myAllocations);
+      
+      // Get tournament assignments for this round
+      try {
+        const tournamentAssignments = await getMyTournamentAssignments(round.round_id);
+        console.log('Tournament assignments:', tournamentAssignments);
+        setTournamentAssignments(tournamentAssignments);
+      } catch (err) {
+        console.log('No tournament assignments found for this round');
+        setTournamentAssignments([]);
+      }
       
       // Get criteria for this round
       const criteria = await getRoundCriteria(round.round_id);
+      console.log('Round criteria:', criteria);
       setRoundCriteria(criteria.filter(c => c.is_active === 1));
       
       // Initialize scores
@@ -75,7 +101,14 @@ const JudgeInterface = () => {
       });
       setScores(initialScores);
       
+      if (myAllocations.length === 0 && tournamentAssignments.length === 0) {
+        setMessage('Jy het geen toewysings vir hierdie rondte nie. Kontak die admin.');
+      } else {
+        setMessage(`Jy het ${myAllocations.length} span(ne) om te beoordeel${tournamentAssignments.length > 0 ? ` en ${tournamentAssignments.length} toernooi wedstryde` : ''}.`);
+      }
+      
     } catch (err) {
+      console.error('Error loading round data:', err);
       setMessage('Fout met laai van rondte data: ' + err.message);
     } finally {
       setLoading(false);
@@ -129,6 +162,46 @@ const JudgeInterface = () => {
       <h1 style={{ color: '#0e1e3b', marginBottom: '30px' }}>
         Beoordelaar Koppelvlak - {user.email}
       </h1>
+      
+      {/* Active Tournament Indicator */}
+      {activeTournament && (
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#e8f5e8',
+          border: '2px solid #28a745',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ color: '#28a745', margin: '0 0 10px 0' }}>
+            🏆 Aktiewe Toernooi
+          </h3>
+          <p style={{ margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
+            {activeTournament.round_name}
+          </p>
+          <p style={{ margin: '5px 0 0 0', color: '#666' }}>
+            {activeTournament.participating_teams} spanne • {activeTournament.assigned_judges} beoordelaars
+          </p>
+        </div>
+      )}
+      
+      {!activeTournament && (
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#fff3cd',
+          border: '2px solid #ffc107',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ color: '#856404', margin: '0 0 10px 0' }}>
+            ⚠️ Geen Aktiewe Toernooi
+          </h3>
+          <p style={{ margin: '0', color: '#856404' }}>
+            Daar is tans geen aktiewe toernooi nie. Wag vir die admin om 'n toernooi te begin.
+          </p>
+        </div>
+      )}
       
       {message && (
         <div style={{
@@ -196,7 +269,7 @@ const JudgeInterface = () => {
             </button>
           </div>
 
-          {myAllocations.length === 0 ? (
+          {myAllocations.length === 0 && tournamentAssignments.length === 0 ? (
             <div style={{
               padding: '40px',
               textAlign: 'center',
@@ -206,7 +279,7 @@ const JudgeInterface = () => {
             }}>
               <h3 style={{ color: '#666' }}>Geen Toewysings</h3>
               <p style={{ color: '#666' }}>
-                Jy het nog nie spanne toegewys gekry vir hierdie rondte nie.
+                Jy het nog nie spanne of toernooi wedstryde toegewys gekry vir hierdie rondte nie.
               </p>
             </div>
           ) : (
@@ -326,6 +399,77 @@ const JudgeInterface = () => {
                   {loading ? 'Stoor...' : 'Stoor Alle Tellinge'}
                 </button>
               </div>
+
+              {/* Tournament Assignments Section */}
+              {tournamentAssignments.length > 0 && (
+                <div style={{ marginTop: '40px' }}>
+                  <h3 style={{ color: '#0e1e3b', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    🏆 Toernooi Wedstryde
+                    <button
+                      onClick={() => setShowTournamentAssignments(!showTournamentAssignments)}
+                      style={{
+                        padding: '5px 10px',
+                        backgroundColor: showTournamentAssignments ? '#dc3545' : '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      {showTournamentAssignments ? 'Verberg' : 'Wys'}
+                    </button>
+                  </h3>
+                  
+                  {showTournamentAssignments && (
+                    <div style={{ 
+                      display: 'grid', 
+                      gap: '15px',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
+                    }}>
+                      {tournamentAssignments.map((assignment, index) => (
+                        <div key={index} style={{
+                          padding: '20px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          backgroundColor: '#f8f9fa'
+                        }}>
+                          <div style={{ marginBottom: '15px' }}>
+                            <h4 style={{ margin: '0 0 10px 0', color: '#0e1e3b' }}>
+                              {assignment.phase_name} - Wedstryd {assignment.match_id}
+                            </h4>
+                            <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
+                              <div>
+                                <strong>Span 1:</strong> {assignment.team1_name || 'TBD'}
+                              </div>
+                              <div>
+                                <strong>Span 2:</strong> {assignment.team2_name || 'TBD'}
+                              </div>
+                            </div>
+                            <div style={{ 
+                              padding: '10px', 
+                              backgroundColor: assignment.is_completed ? '#d4edda' : '#fff3cd',
+                              borderRadius: '4px',
+                              textAlign: 'center'
+                            }}>
+                              <strong>Status:</strong> {assignment.is_completed ? 'Voltooi' : 'Aktief'}
+                            </div>
+                          </div>
+                          
+                          <div style={{ 
+                            padding: '10px', 
+                            backgroundColor: 'white', 
+                            borderRadius: '4px',
+                            border: '1px solid #ddd'
+                          }}>
+                            <strong>Jou Rol:</strong> Beoordelaar vir hierdie wedstryd
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
