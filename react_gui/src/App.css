@@ -1,0 +1,121 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Navigation Bar Styles */
+.navbar {
+  width: 14.28%; /* Approximately 1/7 of the width */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: #77502d;
+  border-right: 2px solid #ccc;
+}
+
+.nav-item {
+  width: 100%;
+  height: 60px;
+  text-align: center;
+  background: #0e1e3b;
+  border: 1px solid black;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 10px;
+  box-sizing: border-box;
+  color: #ffffff;
+}
+
+.nav-item:hover {
+  background: #8c5f38;
+}
+
+/* Main content area to account for fixed navbar */
+.main-content {
+  margin-left: 14.28%;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* User section in navbar */
+.nav-user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  background: #0e1e3b;
+  border: 1px solid black;
+  color: white;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.user-role {
+  font-style: italic;
+  color: #ccc;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+/* Loading state */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #666;
+}
